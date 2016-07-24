@@ -1,0 +1,31 @@
+# User data
+model/*
+!model/cube/
+image/*
+!image/black.png
+
+# Temporary files
+
+# Data
+*.mov
+*.wmv
+*.mp4
+!video.mov
+video
+input
+output
+MarkerData
+output*
+*.zip
+
+# Compiled files
+*.sdf
+*.open*
+*.suo
+.vs
+Debug
+Release
+
+# Reference
+reference
+Display.exe
