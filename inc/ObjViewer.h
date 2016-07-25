@@ -41,6 +41,7 @@ enum WINDOW_ID
     ID_MENU_HELP,
     ID_CANVAS,
     ID_RENDER_MODE_RADIO,
+    ID_RESET,
 };
 
 
@@ -59,6 +60,7 @@ class ObjViewer : public wxFrame
     void onMenuFileExit(wxCommandEvent& evt);
     void onMenuHelpAbout(wxCommandEvent& evt);
     void onRenderModeRadio(wxCommandEvent& evt);
+    void onReset(wxCommandEvent& evt);
     void onMouse(wxMouseEvent& evt);
 
   private:  
@@ -72,6 +74,7 @@ class ObjViewer : public wxFrame
     // ================== Controller part ==================
     wxBoxSizer*           _controllerSizer;
     wxRadioBox*           _renderModeRadioBox;
+    wxButton*             _resetButton;
 
     // Some options
     int  _renderMode;

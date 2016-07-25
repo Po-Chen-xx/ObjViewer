@@ -42,9 +42,6 @@
     <ClInclude Include="inc\OVUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inc\trackball.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\glm\glm.cpp">
@@ -66,9 +63,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\OVUtil.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\trackball.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

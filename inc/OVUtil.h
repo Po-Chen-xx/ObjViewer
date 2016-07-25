@@ -12,7 +12,21 @@
 namespace ov
 {
 
+#define TRACKBALLSIZE 0.8
+
 std::string
 GetFileName(std::string s);
+
+Mat3
+Trackball(const Vec2& prePos, const Vec2& curPos);
+
+double
+GetZValueFrom2DPoint(double r, const Vec2& pos);
+
+Vec3
+FromRotationMatirxToAxisAngle(const Mat3& R);
+
+Mat3
+FromAxisAngleToRotationMatrix(const Vec3& r);
 
 } // namespace ov

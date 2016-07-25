@@ -46,15 +46,16 @@ public:
     void setRenderMode(int renderMode);
     bool setGlmModel(std::string objModelFile);
     bool setBackgroundImamge(std::string imageFile);
-    void forceRender(const Mat3& R, const Vec3& t);
     cv::Mat printScreen();
     void resetMatrix();
+    void setIsNewModel(bool isNewModel) { _isNewModel = isNewModel; }
 
 protected:
+    void onMouse(wxMouseEvent& evt);
+    void onMouseWheel(wxMouseEvent& evt);
     void onIdle(wxIdleEvent& evt);
     void onPaint(wxPaintEvent& evt);
     void onSize(wxSizeEvent& evt);
-    void OnMouse(wxMouseEvent& event);
 
 private:
     // OpenGL functions
@@ -63,14 +64,15 @@ private:
     void drawModel();
 
     // Foreground and background objects
-    ObjViewer*      _objViewer;
-    wxGLContext*    _oglContext;
-    GLMmodel*       _glmModel;
-    cv::Mat         _backgroundImage;
-    GLuint          _textureId;
+    ObjViewer*   _objViewer;
+    wxGLContext* _oglContext;
+    GLMmodel*    _glmModel;
+    cv::Mat      _backgroundImage;
+    GLuint       _textureId;
 
     // Selection of source and destination
     int  _renderMode;
+    bool _isNewModel;
 
     // Offset transformation coefficients
     std::vector<double> _offsetRotation;
@@ -80,11 +82,11 @@ private:
     // For OpenGL rendering
     double _modelViewMatrix[16];
     double _projectionMatrix[16];
+    Mat3   _R;
+    Vec3   _t;
 
     // For trackball
-    double _mouseX;
-    double _mouseY;
-    double _quat[4];
+    Vec2 _mousePos;
 };
 
 } // namespace ov

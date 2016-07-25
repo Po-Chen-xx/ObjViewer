@@ -20,7 +20,6 @@
 #include "ObjViewer.h"
 #include "OVCanvas.h"
 #include "OVUtil.h"
-#include "trackball.h"
 
 namespace ov
 {
@@ -90,6 +89,8 @@ ObjViewer::ObjViewer(const wxString& title)
                                          1,
                                          wxRA_SPECIFY_COLS);
     _controllerSizer->Add(_renderModeRadioBox, 0, wxEXPAND | wxALL, 5);
+    _resetButton = new wxButton(this, ID_RESET, "Reset");
+    _controllerSizer->Add(_resetButton, 0, wxEXPAND | wxALL, 5);
 
     reLayout();
     Show(true);
@@ -99,8 +100,8 @@ ObjViewer::ObjViewer(const wxString& title)
     Connect(ID_MENU_SAVE_IMAGE, wxEVT_MENU, wxCommandEventHandler(ObjViewer::onMenuFileSaveImage));
     Connect(ID_MENU_EXIT, wxEVT_MENU, wxCommandEventHandler(ObjViewer::onMenuFileExit));
     Connect(ID_MENU_HELP, wxEVT_MENU, wxCommandEventHandler(ObjViewer::onMenuHelpAbout));
-    Connect(ID_CANVAS, wxEVT_MOTION, wxMouseEventHandler(ObjViewer::onMouse));
-    Connect(ID_RENDER_MODE_RADIO, wxEVT_COMMAND_RADIOBOX_SELECTED, wxCommandEventHandler(ObjViewer::onRenderModeRadio));
+    Connect(ID_RENDER_MODE_RADIO, wxEVT_RADIOBOX, wxCommandEventHandler(ObjViewer::onRenderModeRadio));
+    Connect(ID_RESET, wxEVT_BUTTON, wxCommandEventHandler(ObjViewer::onReset));
 }
 
 ObjViewer::~ObjViewer()
@@ -115,17 +116,17 @@ ObjViewer::onMenuFileOpenObjModel(wxCommandEvent& evt)
         wxT("Wavefront Files (*.obj)|*.obj|All files (*.*)|*.*"),
         wxFD_OPEN);
 
-    if (objModelFile != "" && objModelFile != _objModelFile)
+    if (objModelFile != "")
     {
         SetStatusText("Loading the new model file...");
-        if (!_oglCanvas->setGlmModel(objModelFile))
+        if (_oglCanvas->setGlmModel(objModelFile))
         {
-            SetStatusText(GetFileName(_objModelFile));
-            return;
+            _oglCanvas->setIsNewModel(true);
+            _oglCanvas->resetMatrix();
+            _oglCanvas->Refresh();
+            _objModelFile = objModelFile;
         }
-        _oglCanvas->Refresh(true);
-        _objModelFile = objModelFile;
-        SetStatusText(GetFileName(objModelFile));
+        SetStatusText(GetFileName(_objModelFile));
     }
 }
 
@@ -142,7 +143,8 @@ ObjViewer::onMenuFileOpenBackgroundImage(wxCommandEvent& evt)
         if (!_oglCanvas->setBackgroundImamge(imageFile))
             return;
         _imageFile = imageFile;
-        _oglCanvas->Refresh(true);
+        _oglCanvas->resetMatrix();
+        _oglCanvas->Refresh();
         reLayout();
     }
 }
@@ -189,12 +191,6 @@ ObjViewer::onMenuHelpAbout(wxCommandEvent& WXUNUSED(evt))
 }
 
 void
-ObjViewer::onMouse(wxMouseEvent& evt)
-{
-
-}
-
-void
 ObjViewer::onRenderModeRadio(wxCommandEvent& WXUNUSED(evt))
 {
     int renderMode = _renderModeRadioBox->GetSelection();
@@ -204,6 +200,14 @@ ObjViewer::onRenderModeRadio(wxCommandEvent& WXUNUSED(evt))
         _oglCanvas->setRenderMode(renderMode);
     }
 }
+
+void
+ObjViewer::onReset(wxCommandEvent& WXUNUSED(evt))
+{
+    _oglCanvas->resetMatrix();
+    Refresh();
+}
+
 
 void
 ObjViewer::reLayout()

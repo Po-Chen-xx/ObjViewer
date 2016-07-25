@@ -155,7 +155,6 @@
     <ClInclude Include="inc\OVUtil.h" />
     <ClInclude Include="inc\ObjViewer.h" />
     <ClInclude Include="inc\OVCanvas.h" />
-    <ClInclude Include="inc\trackball.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\glm\glm.cpp" />
@@ -165,7 +164,6 @@
     <ClCompile Include="src\OVCanvas.cpp" />
     <ClCompile Include="src\OVUtil.cpp" />
     <ClCompile Include="src\ObjViewer.cpp" />
-    <ClCompile Include="src\trackball.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ref\ObjViewer.rc" />

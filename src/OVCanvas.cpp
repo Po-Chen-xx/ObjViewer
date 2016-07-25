@@ -52,14 +52,19 @@ OVCanvas::OVCanvas(ObjViewer *objViewer,
     _offsetTranslation = { 0, 0, 7 };
     _offsetScale = 1;
 
+    _mousePos = Vec2::Zero();
+
     _oglContext = NULL;
     _glmModel = NULL;
     _renderMode = RENDER_SOLID;
+    _isNewModel = false;
     resetMatrix();
 
-    Connect(ID_ANY, wxEVT_PAINT, wxPaintEventHandler(OVCanvas::onPaint));
-    Connect(ID_ANY, wxEVT_SIZE, wxSizeEventHandler(OVCanvas::onSize));
-    Connect(ID_ANY, wxEVT_IDLE, wxIdleEventHandler(OVCanvas::onIdle));
+    Connect(wxEVT_PAINT, wxPaintEventHandler(OVCanvas::onPaint));
+    Connect(wxEVT_SIZE, wxSizeEventHandler(OVCanvas::onSize));
+    Connect(wxEVT_IDLE, wxIdleEventHandler(OVCanvas::onIdle));
+    Connect(wxEVT_MOTION, wxMouseEventHandler(OVCanvas::onMouse));
+    Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(OVCanvas::onMouseWheel));
 
     // Explicitly create a new rendering context instance for this canvas.
     _oglContext = new wxGLContext(this);
@@ -122,6 +127,112 @@ OVCanvas::setRenderMode(int renderMode)
     Refresh();
 }
 
+cv::Mat
+OVCanvas::printScreen()
+{
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+
+    int x, y, w, h;
+    x = vp[0];
+    y = vp[1];
+    w = vp[2];
+    h = vp[3];
+
+    int j;
+
+    unsigned char *bottomup_pixel = (unsigned char *)malloc(w*h * 3 * sizeof(unsigned char));
+    unsigned char *topdown_pixel = (unsigned char *)malloc(w*h * 3 * sizeof(unsigned char));
+
+    //Byte alignment (that is, no alignment)
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    glReadPixels(x, y, w, h, GL_BGR, GL_UNSIGNED_BYTE, bottomup_pixel);
+    for (j = 0; j < h; j++)
+        memcpy(&topdown_pixel[j*w * 3], &bottomup_pixel[(h - j - 1)*w * 3], w * 3 * sizeof(unsigned char));
+
+    cv::Mat image = cv::Mat(h, w, CV_8UC3, topdown_pixel);
+    return image;
+}
+
+void
+OVCanvas::resetMatrix()
+{
+    // Get the default camera parameters accordring to the image size
+    double fx = Vec2(FrameWidth, FrameHeight).norm();
+    double fy = fx;
+    double cx = (FrameWidth - 1.) / 2.;
+    double cy = (FrameHeight - 1.) / 2.;
+    double w = FrameWidth;
+    double h = FrameHeight;
+
+    // Set the projection matrix for opengl
+    _projectionMatrix[0] = 2 * fx / w;
+    _projectionMatrix[1] = 0;
+    _projectionMatrix[2] = 0;
+    _projectionMatrix[3] = 0;
+    _projectionMatrix[4] = 0;
+    _projectionMatrix[5] = -2 * fy / h;
+    _projectionMatrix[6] = 0;
+    _projectionMatrix[7] = 0;
+    _projectionMatrix[8] = 2 * (cx / w) - 1;
+    _projectionMatrix[9] = 1 - 2 * (cy / h);
+    _projectionMatrix[10] = (PlaneFar + PlaneNear) / (PlaneFar - PlaneNear);
+    _projectionMatrix[11] = 1;
+    _projectionMatrix[12] = 0;
+    _projectionMatrix[13] = 0;
+    _projectionMatrix[14] = 2 * PlaneFar*PlaneNear / (PlaneNear - PlaneFar);
+    _projectionMatrix[15] = 0;
+
+    // Set the rotation matrix and translation vector
+    _R = Mat3::Identity();
+    _t = Vec3::Zero();
+}
+
+void
+OVCanvas::onMouse(wxMouseEvent& evt)
+{
+    // It's weird that when we open a new model, this function will be executed
+    if (_isNewModel)
+    {
+        _isNewModel = false;
+        return;
+    }
+
+    if (evt.Dragging())
+    {
+        if (evt.LeftIsDown())
+        {
+            wxSize sz(GetClientSize());
+            Mat3 R = Trackball(Vec2((2.0 * _mousePos(0) - sz.x) / sz.x, (sz.y - 2.0 * _mousePos(1)) / sz.y),
+                               Vec2((2.0 * evt.GetX() - sz.x) / sz.x, (sz.y - 2.0 * evt.GetY()) / sz.y));
+            _R = R * _R;
+            Refresh();
+        }
+        else
+        {
+            wxSize sz(GetClientSize());
+            double ratio = 4;
+            double diffX = (evt.GetX() - _mousePos(0)) / sz.x;
+            double diffY = (_mousePos(1) - evt.GetY()) / sz.y;
+            _t += Vec3(diffX, diffY, 0) * ratio;
+            Refresh();
+        }
+    }
+
+    _mousePos = Vec2(evt.GetX(), evt.GetY());
+}
+
+void OVCanvas::onMouseWheel(wxMouseEvent& evt)
+{
+    if (evt.GetWheelAxis() != wxMOUSE_WHEEL_VERTICAL)
+        return;
+
+    double ratio = 0.005;
+    _t -= Vec3(0, 0, evt.GetWheelRotation()) * ratio;
+    Refresh();
+}
+
 void
 OVCanvas::onIdle(wxIdleEvent& WXUNUSED(evt))
 {
@@ -133,35 +244,21 @@ OVCanvas::onPaint(wxPaintEvent& WXUNUSED(evt))
 {
     SetCurrent(*_oglContext);
 
+    // Render the background image
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_TEXTURE_2D);
     glDisable(GL_LIGHTING);
     drawBackground();
     glDisable(GL_TEXTURE_2D);
 
-    // Render the foreground target
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-
-    glMultMatrixd(_modelViewMatrix);
-    glTranslatef(_offsetTranslation[0], _offsetTranslation[1], _offsetTranslation[2]);
-    glRotatef(_offsetRotation[2], 0, 0, 1);
-    glRotatef(_offsetRotation[1], 0, 1, 0);
-    glRotatef(_offsetRotation[0], 1, 0, 0);
-    glScalef(_offsetScale, _offsetScale, _offsetScale);
-
     // Lighting
     const GLfloat a[] = { 0.5f, 0.5f, 0.5f, 1.0f };
     const GLfloat d[] = { 0.5f, 0.5f, 0.5f, 0.5f };
     const GLfloat s[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    const GLfloat p0[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    const GLfloat p1[] = { 1.0f, -1.0f, 1.0f, 1.0f };
-    const GLfloat p2[] = { -1.0f, 1.0f, 1.0f, 1.0f };
-    const GLfloat p3[] = { -1.0f, -1.0f, 1.0f, 1.0f };
-    const GLfloat p4[] = { 1.0f, 1.0f, -1.0f, 1.0f };
-    const GLfloat p5[] = { 1.0f, -1.0f, -1.0f, 1.0f };
-    const GLfloat p6[] = { -1.0f, 1.0f, -1.0f, 1.0f };
-    const GLfloat p7[] = { -1.0f, -1.0f, -1.0f, 1.0f };
+    const GLfloat p0[] = { 7.0f, 0.0f, 0.0f, 1.0f };
+    const GLfloat p1[] = { -7.0f, -0.0f, 0.0f, 1.0f };
+    const GLfloat p2[] = { 0.0f, 7.0f, 0.0f, 1.0f };
+    const GLfloat p3[] = { 0.0f, -7.0f, 0.0f, 1.0f };
     glLightfv(GL_LIGHT0, GL_AMBIENT, a);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, d);
     glLightfv(GL_LIGHT0, GL_SPECULAR, s);
@@ -178,36 +275,33 @@ OVCanvas::onPaint(wxPaintEvent& WXUNUSED(evt))
     glLightfv(GL_LIGHT3, GL_DIFFUSE, d);
     glLightfv(GL_LIGHT3, GL_SPECULAR, s);
     glLightfv(GL_LIGHT3, GL_POSITION, p3);
-    glLightfv(GL_LIGHT4, GL_AMBIENT, a);
-    glLightfv(GL_LIGHT4, GL_DIFFUSE, d);
-    glLightfv(GL_LIGHT4, GL_SPECULAR, s);
-    glLightfv(GL_LIGHT4, GL_POSITION, p4);
-    glLightfv(GL_LIGHT5, GL_AMBIENT, a);
-    glLightfv(GL_LIGHT5, GL_DIFFUSE, d);
-    glLightfv(GL_LIGHT5, GL_SPECULAR, s);
-    glLightfv(GL_LIGHT5, GL_POSITION, p5);
-    glLightfv(GL_LIGHT6, GL_AMBIENT, a);
-    glLightfv(GL_LIGHT6, GL_DIFFUSE, d);
-    glLightfv(GL_LIGHT6, GL_SPECULAR, s);
-    glLightfv(GL_LIGHT6, GL_POSITION, p6);
-    glLightfv(GL_LIGHT7, GL_AMBIENT, a);
-    glLightfv(GL_LIGHT7, GL_DIFFUSE, d);
-    glLightfv(GL_LIGHT7, GL_SPECULAR, s);
-    glLightfv(GL_LIGHT7, GL_POSITION, p7);
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHT1);
     glEnable(GL_LIGHT2);
     glEnable(GL_LIGHT3);
-    glEnable(GL_LIGHT4);
-    glEnable(GL_LIGHT5);
-    glEnable(GL_LIGHT6);
-    glEnable(GL_LIGHT7);
     glEnable(GL_LIGHTING);
+
+    // Render the foreground target
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+    glTranslatef(_offsetTranslation[0], _offsetTranslation[1], _offsetTranslation[2]);
+    glRotatef(_offsetRotation[2], 0, 0, 1);
+    glRotatef(_offsetRotation[1], 0, 1, 0);
+    glRotatef(_offsetRotation[0], 1, 0, 0);
+    glScalef(_offsetScale, _offsetScale, _offsetScale);
+    // Fill in modelViewMatrix
+    for (int i = 0; i < 3; ++i)
+    {
+        _modelViewMatrix[12 + i] = _t(i, 0);
+        for (int j = 0; j < 3; ++j)
+            _modelViewMatrix[i * 4 + j] = _R(j, i);
+    }
+    _modelViewMatrix[3] = _modelViewMatrix[7] = _modelViewMatrix[11] = 0;
+    _modelViewMatrix[15] = 1;
+    glMultMatrixd(_modelViewMatrix);
 
     // Semitransparent effect 
     glEnable(GL_BLEND);
-    // Remove back faces
-    glEnable(GL_CULL_FACE); 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     if (_renderMode == RENDER_SOLID)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -215,7 +309,6 @@ OVCanvas::onPaint(wxPaintEvent& WXUNUSED(evt))
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     drawModel();
     glDisable(GL_BLEND);
-    glDisable(GL_CULL_FACE);
 
     glFlush();
     SwapBuffers();
@@ -300,81 +393,5 @@ OVCanvas::drawModel()
     glmDraw(_glmModel, drawMode);
 }
 
-void
-OVCanvas::resetMatrix()
-{
-    // Get the default camera parameters accordring to the image size
-    double fx = Vec2(FrameWidth, FrameHeight).norm();
-    double fy = fx;
-    double cx = (FrameWidth - 1.) / 2.;
-    double cy = (FrameHeight - 1.) / 2.;
-    double w = FrameWidth;
-    double h = FrameHeight;
-
-    // Set the projection matrix for opengl
-    _projectionMatrix[0] = 2 * fx / w;
-    _projectionMatrix[1] = 0;
-    _projectionMatrix[2] = 0;
-    _projectionMatrix[3] = 0;
-    _projectionMatrix[4] = 0;
-    _projectionMatrix[5] = -2 * fy / h;
-    _projectionMatrix[6] = 0;
-    _projectionMatrix[7] = 0;
-    _projectionMatrix[8] = 2 * (cx / w) - 1;
-    _projectionMatrix[9] = 1 - 2 * (cy / h);
-    _projectionMatrix[10] = (PlaneFar + PlaneNear) / (PlaneFar - PlaneNear);
-    _projectionMatrix[11] = 1;
-    _projectionMatrix[12] = 0;
-    _projectionMatrix[13] = 0;
-    _projectionMatrix[14] = 2 * PlaneFar*PlaneNear / (PlaneNear - PlaneFar);
-    _projectionMatrix[15] = 0;
-
-    // Set the extrinsic matrix
-    memset(_modelViewMatrix, 0, 16 * sizeof(double));
-    _modelViewMatrix[0] = _modelViewMatrix[5] = _modelViewMatrix[10] = _modelViewMatrix[15] = 1;
-}
-
-cv::Mat
-OVCanvas::printScreen()
-{
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-
-    int x, y, w, h;
-    x = vp[0];
-    y = vp[1];
-    w = vp[2];
-    h = vp[3];
-
-    int j;
-
-    unsigned char *bottomup_pixel = (unsigned char *)malloc(w*h * 3 * sizeof(unsigned char));
-    unsigned char *topdown_pixel = (unsigned char *)malloc(w*h * 3 * sizeof(unsigned char));
-
-    //Byte alignment (that is, no alignment)
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
-    glReadPixels(x, y, w, h, GL_BGR, GL_UNSIGNED_BYTE, bottomup_pixel);
-    for (j = 0; j < h; j++)
-        memcpy(&topdown_pixel[j*w * 3], &bottomup_pixel[(h - j - 1)*w * 3], w * 3 * sizeof(unsigned char));
-
-    cv::Mat image = cv::Mat(h, w, CV_8UC3, topdown_pixel);
-    return image;
-}
-
-void
-OVCanvas::forceRender(const Mat3& R, const Vec3& t)
-{
-    // Fill in modelViewMatrix
-    for (int i = 0; i < 3; ++i)
-    {
-        _modelViewMatrix[12 + i] = t(i, 0);
-        for (int j = 0; j < 3; ++j)
-            _modelViewMatrix[i * 4 + j] = R(j, i);
-    }
-    _modelViewMatrix[3] = _modelViewMatrix[7] = _modelViewMatrix[11] = 0;
-    _modelViewMatrix[15] = 1;
-    onPaint(wxPaintEvent());
-}
 
 } // namespace ov
