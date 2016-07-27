@@ -13,20 +13,8 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Header Files\glm">
-      <UniqueIdentifier>{d461aea8-15f3-41b2-b875-9e16e1c89f46}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\glm">
-      <UniqueIdentifier>{ab1b3f2c-92ef-4206-9db2-e20483fdaa43}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="inc\glm\glm.h">
-      <Filter>Header Files\glm</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\glm\Texture.h">
-      <Filter>Header Files\glm</Filter>
-    </ClInclude>
     <ClInclude Include="inc\main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -50,15 +38,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\glm\glm.cpp">
-      <Filter>Source Files\glm</Filter>
-    </ClCompile>
-    <ClCompile Include="src\glm\glmimg.cpp">
-      <Filter>Source Files\glm</Filter>
-    </ClCompile>
-    <ClCompile Include="src\glm\Texture.cpp">
-      <Filter>Source Files\glm</Filter>
-    </ClCompile>
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -115,7 +115,7 @@ public:
     }
   }
 
-//private:
+private:
   union
   {
     float coord[3];

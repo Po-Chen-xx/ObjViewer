@@ -18,7 +18,6 @@
 #include <unordered_map>
 #include "wx/glcanvas.h"
 #include "ObjViewer.h"
-#include "glm/glm.h"
 #include "OVCommon.h"
 #include "TinyObjLoader.h"
 
@@ -46,7 +45,6 @@ public:
     static double PlaneFar;
 
     void setRenderMode(int renderMode);
-    bool setGlmModel(std::string objModelFile);//******
     bool setForegroundObject(const std::string& filename, bool isUnitization = true);
     bool setBackgroundImamge(const std::string& filename);
     cv::Mat printScreen();
@@ -69,7 +67,6 @@ private:
                         const std::vector<tinyobj::material_t>& materials,
                         const std::unordered_map<std::string, GLuint>& textureIds);
     void unitize(std::vector<tinyobj::shape_t>& shapes);
-    void drawModel();//******
 
     // Widgets
     ObjViewer*   _objViewer;
@@ -79,7 +76,6 @@ private:
     std::vector<tinyobj::shape_t>           _shapes;
     std::vector<tinyobj::material_t>        _materials;
     std::unordered_map<std::string, GLuint> _textureIds;
-    GLMmodel*                               _glmModel;//******
 
     // Backgroubd objects
     cv::Mat _backgroundImage;

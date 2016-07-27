@@ -148,8 +148,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="inc\glm\glm.h" />
-    <ClInclude Include="inc\glm\Texture.h" />
     <ClInclude Include="inc\main.h" />
     <ClInclude Include="inc\OVCommon.h" />
     <ClInclude Include="inc\OVTexture.h" />
@@ -159,9 +157,6 @@
     <ClInclude Include="inc\TinyObjLoader.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\glm\glm.cpp" />
-    <ClCompile Include="src\glm\glmimg.cpp" />
-    <ClCompile Include="src\glm\Texture.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\OVCanvas.cpp" />
     <ClCompile Include="src\OVTexture.cpp" />

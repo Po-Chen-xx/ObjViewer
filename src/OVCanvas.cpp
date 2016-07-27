@@ -17,7 +17,6 @@
 #include <iomanip>
 #include <algorithm>
 #include "ObjViewer.h"
-#include "glm/glm.h"
 #include "OVCanvas.h"
 #include "OVTexture.h"
 #include "OVUtil.h"
@@ -49,7 +48,6 @@ OVCanvas::OVCanvas(ObjViewer *objViewer,
     _mousePos = Vec2::Zero();
 
     _oglContext = NULL;
-    _glmModel = NULL;
     _renderMode = RENDER_SOLID;
     _isNewFile = false;
     _lightingOn = true;
@@ -70,24 +68,6 @@ OVCanvas::OVCanvas(ObjViewer *objViewer,
 OVCanvas::~OVCanvas()
 {
     if (_oglContext) delete _oglContext;
-    if (_glmModel) delete _glmModel;
-}
-
-bool
-OVCanvas::setGlmModel(std::string modelFile)
-{
-    if (_glmModel) delete _glmModel;
-    _glmModel = glmReadOBJ(modelFile.c_str());
-    if (!_glmModel)
-    {
-        wxString msg = "Failed to open \"" + modelFile + "\"...";
-        wxMessageBox(msg, wxT("Error"), wxICON_ERROR);
-        return false;
-    }
-    glmUnitize(_glmModel);
-    glmFacetNormals(_glmModel);
-    glmVertexNormals(_glmModel, 90.0);
-    return true;
 }
 
 bool
@@ -351,7 +331,6 @@ OVCanvas::onPaint(wxPaintEvent& WXUNUSED(evt))
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    //drawModel();//******
     drawForeground(_shapes, _materials, _textureIds);
     glDisable(GL_BLEND);
 
@@ -545,14 +524,5 @@ OVCanvas::unitize(std::vector<tinyobj::shape_t>& shapes)
         }
     }
 }
-
-void
-OVCanvas::drawModel()
-{
-    SetCurrent(*_oglContext);
-    GLuint drawMode = (_glmModel->texcoords) ? GLM_SMOOTH | GLM_TEXTURE | GLM_MATERIAL : GLM_SMOOTH | GLM_COLOR;
-    glmDraw(_glmModel, drawMode);
-}
-
 
 } // namespace ov

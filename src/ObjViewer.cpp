@@ -70,8 +70,7 @@ ObjViewer::ObjViewer(const wxString& title)
     _mainSizer->Add(_oglCanvas, 1, wxEXPAND);
     _oglCanvas->setRenderMode(_renderMode);
     _oglCanvas->setBackgroundImamge(_imageFile);
-    //_oglCanvas->setGlmModel(_objModelFile);
-    _oglCanvas->setForegroundObject(_objModelFile);//******
+    _oglCanvas->setForegroundObject(_objModelFile);
 
     // ==================================== Controller part ====================================
     _controllerSizer = new wxBoxSizer(wxVERTICAL);
@@ -127,7 +126,6 @@ ObjViewer::onMenuFileOpenObjModel(wxCommandEvent& evt)
     if (objModelFile != "")
     {
         SetStatusText("Loading the new model file...");
-        //if (_oglCanvas->setGlmModel(objModelFile))//******
         if (_oglCanvas->setForegroundObject(objModelFile))
         {
             _oglCanvas->setIsNewFile(true);

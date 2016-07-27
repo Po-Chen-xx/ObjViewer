@@ -53,18 +53,6 @@ static inline bool operator<(const vertex_index &a, const vertex_index &b) {
   return false;
 }
 
-// for std::map
-static inline bool operator<(const float3 &a, const float3 &b) {
-    if (a.x != b.x)
-        return (a.x < b.x);
-    if (a.y != b.y)
-        return (a.y < b.y);
-    if (a.z != b.z)
-        return (a.z < b.z);
-
-    return false;
-}
-
 struct obj_shape {
   std::vector<float> v;
   std::vector<float> vn;
@@ -479,89 +467,29 @@ static bool exportFaceGroupToShape(
   if (normals_calculation && shape.mesh.normals.empty()) {
         const size_t nIndecis = shape.mesh.indices.size();
         if (nIndecis % 3 == 0) {
-            //shape.mesh.normals.resize(shape.mesh.positions.size());
-            //for (register size_t iIndices = 0; iIndices < nIndecis; iIndices += 3) {
-            //    float3 v1, v2, v3;
-            //    memcpy(&v1, &shape.mesh.positions[shape.mesh.indices[iIndices] * 3], sizeof(float3));
-            //    memcpy(&v2, &shape.mesh.positions[shape.mesh.indices[iIndices + 1] * 3], sizeof(float3));
-            //    memcpy(&v3, &shape.mesh.positions[shape.mesh.indices[iIndices + 2] * 3], sizeof(float3));
+            shape.mesh.normals.resize(shape.mesh.positions.size());
+            for (register size_t iIndices = 0; iIndices < nIndecis; iIndices += 3) {
+                float3 v1, v2, v3;
+                memcpy(&v1, &shape.mesh.positions[shape.mesh.indices[iIndices] * 3], sizeof(float3));
+                memcpy(&v2, &shape.mesh.positions[shape.mesh.indices[iIndices + 1] * 3], sizeof(float3));
+                memcpy(&v3, &shape.mesh.positions[shape.mesh.indices[iIndices + 2] * 3], sizeof(float3));
 
-            //    float3 v12(v1, v2);
-            //    float3 v13(v1, v3);
+                float3 v12(v1, v2);
+                float3 v13(v1, v3);
 
-            //    float3 normal = v12.crossproduct(v13);
-            //    normal.normalize();
+                float3 normal = v12.crossproduct(v13);
+                normal.normalize();
 
-            //    memcpy(&shape.mesh.normals[shape.mesh.indices[iIndices] * 3], &normal, sizeof(float3));
-            //    memcpy(&shape.mesh.normals[shape.mesh.indices[iIndices + 1] * 3], &normal, sizeof(float3));
-            //    memcpy(&shape.mesh.normals[shape.mesh.indices[iIndices + 2] * 3], &normal, sizeof(float3));
-            //}
+                memcpy(&shape.mesh.normals[shape.mesh.indices[iIndices] * 3], &normal, sizeof(float3));
+                memcpy(&shape.mesh.normals[shape.mesh.indices[iIndices + 1] * 3], &normal, sizeof(float3));
+                memcpy(&shape.mesh.normals[shape.mesh.indices[iIndices + 2] * 3], &normal, sizeof(float3));
+            }
+        } else {
 
-
-          // Compute the normal for each different vertex
-          int num = shape.mesh.positions.size() / 3;
-          std::map<float3, int> positionMap;
-          std::vector<int> indexMap(num);
-          for (register size_t i = 0, j = 0; i < num; ++i) {
-              float3 v;
-              memcpy(&v, &shape.mesh.positions[i * 3], sizeof(float3));
-              auto got = positionMap.find(v);
-              if (got == positionMap.end()) {
-                  indexMap[i] = j;
-                  positionMap[v] = j++;
-              }
-              else {
-                  indexMap[i] = got->second;
-              }
-          }
-
-          int exactPosNum = positionMap.size();
-          std::vector<float> normals(exactPosNum * 3, 0);
-
-          // Sum the face normals neighboring the vertex
-          for (register size_t iIndices = 0; iIndices < nIndecis; iIndices += 3) {
-              float3 v1, v2, v3;
-              memcpy(&v1, &shape.mesh.positions[shape.mesh.indices[iIndices] * 3], sizeof(float3));
-              memcpy(&v2, &shape.mesh.positions[shape.mesh.indices[iIndices + 1] * 3], sizeof(float3));
-              memcpy(&v3, &shape.mesh.positions[shape.mesh.indices[iIndices + 2] * 3], sizeof(float3));
-
-              float3 v12(v1, v2);
-              float3 v13(v1, v3);
-
-              float3 normal = v12.crossproduct(v13);
-              normal.normalize();
-
-              for (size_t i = 0; i < 3; ++i) {
-                  normals[positionMap[v1] * 3 + i] += normal.coord[i];
-                  normals[positionMap[v2] * 3 + i] += normal.coord[i];
-                  normals[positionMap[v3] * 3 + i] += normal.coord[i];
-              }
-          }
-
-          // The normal vector of each vertex should be the normalized vector of its summed neighboring face normals
-          for (register size_t i = 0; i < exactPosNum; ++i) {
-              float3 v(normals[3 * i], normals[3 * i + 1], normals[3 * i + 2]);
-              v.normalize();
-              memcpy(&normals[3 * i], &v, sizeof(float3));
-              //float norm = 0;
-              //for (size_t j = 0; j < 3; ++j)
-              //    norm += pow(normals[3 * i + j], 2);
-              //norm = sqrt(norm);
-              //for (size_t j = 0; j < 3; ++j)
-              //    normals[3 * i + j] /= norm;
-          }
-
-          // Fill in the original shape.mesh.normals
-          shape.mesh.normals.resize(shape.mesh.positions.size());
-          for (register size_t i = 0; i < num; ++i) {
-              memcpy(&shape.mesh.normals[i * 3], &normals[indexMap[i] * 3], 3 * sizeof(float));
-          }
-	  } else {
-
-		  std::stringstream ss;
-		  ss << "WARN: The shape " << name << " does not have a topology of triangles, therfore the normals calculation could not be performed. Select the tinyobj::triangulation flag for this object." << std::endl;
-		  err += ss.str();
-	  }
+	        std::stringstream ss;
+	        ss << "WARN: The shape " << name << " does not have a topology of triangles, therfore the normals calculation could not be performed. Select the tinyobj::triangulation flag for this object." << std::endl;
+	        err += ss.str();
+        }
   }
 
   shape.name = name;
