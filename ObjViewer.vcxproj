@@ -83,7 +83,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>inc;C:\opencv\build\include;C:\opencv_contrib\modules\aruco\include;C:\wxWidgets-3.1.0\include;C:\wxWidgets-3.1.0\include\msvc;C:\Eigen;$(IncludePath)</IncludePath>
-    <LibraryPath>ARToolKitPlus-2.3.1\lib\Release;C:\opencv\build\x64\vc14\lib;C:\opencv\sources\buildx64\lib\Release;C:\wxWidgets-3.1.0\lib\vc_x64_lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\opencv\build\x64\vc14\lib;C:\opencv\sources\buildx64\lib\Release;C:\wxWidgets-3.1.0\lib\vc_x64_lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -152,9 +152,11 @@
     <ClInclude Include="inc\glm\Texture.h" />
     <ClInclude Include="inc\main.h" />
     <ClInclude Include="inc\OVCommon.h" />
+    <ClInclude Include="inc\OVTexture.h" />
     <ClInclude Include="inc\OVUtil.h" />
     <ClInclude Include="inc\ObjViewer.h" />
     <ClInclude Include="inc\OVCanvas.h" />
+    <ClInclude Include="inc\TinyObjLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\glm\glm.cpp" />
@@ -162,8 +164,10 @@
     <ClCompile Include="src\glm\Texture.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\OVCanvas.cpp" />
+    <ClCompile Include="src\OVTexture.cpp" />
     <ClCompile Include="src\OVUtil.cpp" />
     <ClCompile Include="src\ObjViewer.cpp" />
+    <ClCompile Include="src\TinyObjLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ref\ObjViewer.rc" />

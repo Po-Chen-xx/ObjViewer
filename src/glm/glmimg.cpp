@@ -28,7 +28,7 @@ GLuint glmLoadTexture(char *filename, GLboolean alpha, GLboolean repeat, GLboole
     char *numefis = filename;
     while (*numefis==' ') numefis++;
     Texture ttt;
-    LoadTGA(&ttt,(char *)numefis);
+    LoadTexture(&ttt,(char *)numefis);
     data = ttt.imageData;
     width = ttt.width;
     height = ttt.height;

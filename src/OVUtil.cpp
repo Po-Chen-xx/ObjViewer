@@ -30,6 +30,35 @@ GetFileName(std::string s)
         return("");
 }
 
+std::string
+GetExt(std::string s)
+{
+    char sep = '.';
+
+    size_t i = s.rfind(sep, s.length());
+
+    if (i != std::string::npos)
+        return(s.substr(i + 1, s.length() - i));
+    else
+        return("");
+}
+
+std::string
+GetDir(std::string s)
+{
+    char sep1 = '/', sep2 = '\\';
+
+    size_t i = s.rfind(sep1, s.length());
+    size_t j = s.rfind(sep2, s.length());
+
+    if (i != std::string::npos)
+        return(s.substr(0, i + 1));
+    else if (j != std::string::npos)
+        return(s.substr(0, j + 1));
+    else
+        return("");
+}
+
 // Simulate a trackball by projecting the previous and current points onto
 // a virtual sphere, and then compute the related rotation matrix.
 // August '88 issue of Siggraph's "Computer Graphics," pp. 121-129
@@ -119,5 +148,18 @@ FromAxisAngleToRotationMatrix(const Vec3& r)
     else
         return I + W * sin(a) / a + W2 * (1 - cos(a)) / (a * a);
 }
+
+wxCheckBox*
+CreateCheckBoxAndAddToSizer(wxWindow* parent,
+    wxSizer *sizer,
+    wxString labelStr,
+    wxWindowID id)
+{
+    wxCheckBox *checkbox = new wxCheckBox(parent, id, labelStr);
+    sizer->Add(checkbox, 0, wxEXPAND | wxALL, 3);
+
+    return checkbox;
+}
+
 
 } // namespace ov

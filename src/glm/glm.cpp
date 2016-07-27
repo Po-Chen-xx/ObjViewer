@@ -11,6 +11,9 @@ coordinate generation (spheremap and planar projections) + more.
 
 Improved version of GLM - 08.05.2008 Tudor Carean
 Added support for textures and loading callbacks
+
+Improved version of GLM - 07.24.2016 Po-Chen Wu
+Added support for different image format (dependency: opencv)
 */
 
 #include <math.h>
@@ -365,9 +368,9 @@ static GLvoid
     for (i = 0; i < nummaterials; i++) {
         model->materials[i].name = NULL;
         model->materials[i].shininess = 65.0;
-        model->materials[i].diffuse[0] = 0.8;
-        model->materials[i].diffuse[1] = 0.8;
-        model->materials[i].diffuse[2] = 0.8;
+        model->materials[i].diffuse[0] = 0.5;
+        model->materials[i].diffuse[1] = 0.5;
+        model->materials[i].diffuse[2] = 0.5;
         model->materials[i].diffuse[3] = 1.0;
         model->materials[i].ambient[0] = 0.2;
         model->materials[i].ambient[1] = 0.2;
@@ -405,10 +408,16 @@ static GLvoid
         case 'K':
             switch(buf[1]) {
             case 'd':
+                GLfloat diffuse[3];
                 fscanf(file, "%f %f %f",
-                    &model->materials[nummaterials].diffuse[0],
-                    &model->materials[nummaterials].diffuse[1],
-                    &model->materials[nummaterials].diffuse[2]);
+                    &diffuse[0],
+                    &diffuse[1],
+                    &diffuse[2]);
+                if (diffuse[0] != 0 || diffuse[1] != 0 || diffuse[2] != 0) {
+                    model->materials[nummaterials].diffuse[0] = diffuse[0];
+                    model->materials[nummaterials].diffuse[1] = diffuse[1];
+                    model->materials[nummaterials].diffuse[2] = diffuse[2];
+                }
                 break;
             case 's':
                 fscanf(file, "%f %f %f",
@@ -1785,65 +1794,65 @@ GLvoid glmDraw(GLMmodel* model, GLuint mode,char *drawonly)
                 continue;
             }       
 
-            material = &model->materials[group->material];
-            if (material)
-                IDTextura = material->IDTextura;
-            else IDTextura=-1;
+        material = &model->materials[group->material];
+        if (material)
+            IDTextura = material->IDTextura;
+        else IDTextura=-1;
 
-            if (mode & GLM_MATERIAL) 
-            {            
-                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, material->ambient);
-                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material->diffuse);
-                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material->specular);
-                glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material->shininess);
-            }
+        if (mode & GLM_MATERIAL) 
+        {            
+            glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, material->ambient);
+            glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material->diffuse);
+            glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material->specular);
+            glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material->shininess);
+        }
 
-            if (mode & GLM_TEXTURE) 
-            {               
-                if(IDTextura == -1)
-                    glBindTexture(GL_TEXTURE_2D, 0);
-                else
-                    glBindTexture(GL_TEXTURE_2D, model->textures[IDTextura].id);        
-            }
+        if (mode & GLM_TEXTURE) 
+        {               
+            if(IDTextura == -1)
+                glBindTexture(GL_TEXTURE_2D, 0);
+            else
+                glBindTexture(GL_TEXTURE_2D, model->textures[IDTextura].id);        
+        }
 
-            if (mode & GLM_COLOR) {
-                glColor3fv(material->diffuse);
-            }
+        if (mode & GLM_COLOR) {
+            glColor3fv(material->diffuse);
+        }
 
-            glBegin(GL_TRIANGLES);
-            for (i = 0; i < group->numtriangles; i++) {
-                triangle = &T(group->triangles[i]);
+        glBegin(GL_TRIANGLES);
+        for (i = 0; i < group->numtriangles; i++) {
+            triangle = &T(group->triangles[i]);
 #ifdef DebugVisibleSurfaces
-                if (!triangle->visible) continue;
+            if (!triangle->visible) continue;
 #endif
-                if (mode & GLM_FLAT)
-                    glNormal3fv(&model->facetnorms[3 * triangle->findex]);
+            if (mode & GLM_FLAT)
+                glNormal3fv(&model->facetnorms[3 * triangle->findex]);
 
-                if (mode & GLM_SMOOTH)
-                    glNormal3fv(&model->normals[3 * triangle->nindices[0]]);
-                if (mode & GLM_TEXTURE)
-                    glTexCoord2fv(&model->texcoords[2 * triangle->tindices[0]]);
-                glVertex3fv(&model->vertices[3 * triangle->vindices[0]]);
+            if (mode & GLM_SMOOTH)
+                glNormal3fv(&model->normals[3 * triangle->nindices[0]]);
+            if (mode & GLM_TEXTURE)
+                glTexCoord2fv(&model->texcoords[2 * triangle->tindices[0]]);
+            glVertex3fv(&model->vertices[3 * triangle->vindices[0]]);
 
-                if (mode & GLM_SMOOTH)
-                    glNormal3fv(&model->normals[3 * triangle->nindices[1]]);
-                if (mode & GLM_TEXTURE)
-                {
-                    //if (IDTextura==-1) printf("Warning: GLM_TEXTURE este on dar nu este setata nici o textura in material!");
-                    glTexCoord2fv(&model->texcoords[2 * triangle->tindices[1]]);
-                }
-                glVertex3fv(&model->vertices[3 * triangle->vindices[1]]);
-
-                if (mode & GLM_SMOOTH)
-                    glNormal3fv(&model->normals[3 * triangle->nindices[2]]);
-                if (mode & GLM_TEXTURE)
-                    glTexCoord2fv(&model->texcoords[2 * triangle->tindices[2]]);
-                glVertex3fv(&model->vertices[3 * triangle->vindices[2]]);
-
+            if (mode & GLM_SMOOTH)
+                glNormal3fv(&model->normals[3 * triangle->nindices[1]]);
+            if (mode & GLM_TEXTURE)
+            {
+                //if (IDTextura==-1) printf("Warning: GLM_TEXTURE este on dar nu este setata nici o textura in material!");
+                glTexCoord2fv(&model->texcoords[2 * triangle->tindices[1]]);
             }
-            glEnd();
+            glVertex3fv(&model->vertices[3 * triangle->vindices[1]]);
 
-            group = group->next;
+            if (mode & GLM_SMOOTH)
+                glNormal3fv(&model->normals[3 * triangle->nindices[2]]);
+            if (mode & GLM_TEXTURE)
+                glTexCoord2fv(&model->texcoords[2 * triangle->tindices[2]]);
+            glVertex3fv(&model->vertices[3 * triangle->vindices[2]]);
+
+        }
+        glEnd();
+
+        group = group->next;
     }
 }
 

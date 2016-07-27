@@ -15,22 +15,16 @@
 #include <opencv2/opencv.hpp>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 #include "ObjViewer.h"
 #include "glm/glm.h"
 #include "OVCanvas.h"
+#include "OVTexture.h"
 #include "OVUtil.h"
 #include "OVCommon.h"
 
 namespace ov
 {
-
-#ifndef GL_BGR
-    #define GL_BGR GL_BGR_EXT
-#endif
-
-#ifndef GL_BGRA
-    #define GL_BGRA GL_BGRA_EXT
-#endif
 
 int OVCanvas::FrameWidth = 800;
 int OVCanvas::FrameHeight = 600;
@@ -57,7 +51,8 @@ OVCanvas::OVCanvas(ObjViewer *objViewer,
     _oglContext = NULL;
     _glmModel = NULL;
     _renderMode = RENDER_SOLID;
-    _isNewModel = false;
+    _isNewFile = false;
+    _lightingOn = true;
     resetMatrix();
 
     Connect(wxEVT_PAINT, wxPaintEventHandler(OVCanvas::onPaint));
@@ -96,21 +91,61 @@ OVCanvas::setGlmModel(std::string modelFile)
 }
 
 bool
-OVCanvas::setBackgroundImamge(std::string imageFile)
+OVCanvas::setForegroundObject(const std::string& filename, bool isUnitization)
 {
-    cv::Mat cameraImage = cv::imread(imageFile, CV_LOAD_IMAGE_COLOR);
-    if (cameraImage.empty())
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::unordered_map<std::string, GLuint> textureIds;
+    std::string dir = GetDir(filename);
+    std::string err;
+
+    if(!tinyobj::LoadObj(shapes,
+                         materials,
+                         err,
+                         filename.c_str(),
+                         dir.c_str(),
+                         tinyobj::triangulation | tinyobj::calculate_normals))
     {
-        wxString msg = "Cannot open \"" + imageFile + "\".\n";
+        wxString msg = err;
         wxMessageBox(msg, wxT("Error"), wxICON_ERROR);
         return false;
     }
-    else
+    
+    if (!LoadTextures(materials, textureIds, dir))
+        return false;
+
+    if (isUnitization)
+        unitize(shapes);
+
+    _shapes = shapes;
+    _materials = materials;
+    _textureIds = textureIds;
+
+    return true;
+}
+
+bool
+OVCanvas::setBackgroundImamge(const std::string& filename)
+{
+    cv::Mat cameraImage = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
+    if (cameraImage.empty())
     {
-        _backgroundImage = cameraImage;
-        FrameWidth = _backgroundImage.cols;
-        FrameHeight = _backgroundImage.rows;
+        wxString msg = "Cannot open \"" + filename + "\".\n";
+        wxMessageBox(msg, wxT("Error"), wxICON_ERROR);
+        return false;
     }
+
+    _backgroundImage = cameraImage;
+    FrameWidth = _backgroundImage.cols;
+    FrameHeight = _backgroundImage.rows;
+
+    glBindTexture(GL_TEXTURE_2D, _backgroundImageTextureId);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    // set texture filter to linear - we do not build mipmaps for speed
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // create the texture from OpenCV image data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, FrameWidth, FrameHeight, 0, GL_BGR, GL_UNSIGNED_BYTE, _backgroundImage.data);
 
     // After getting the projection matrix, we do resize one time
     SetClientSize(wxSize(OVCanvas::FrameWidth, OVCanvas::FrameHeight));
@@ -187,15 +222,25 @@ OVCanvas::resetMatrix()
     // Set the rotation matrix and translation vector
     _R = Mat3::Identity();
     _t = Vec3::Zero();
+
+    // After getting the reseted matrices, we do resize one time
+    onSize(wxSizeEvent());
+}
+
+void
+OVCanvas::setLightingOn(bool lightingOn)
+{
+    _lightingOn = lightingOn;
+    Refresh();
 }
 
 void
 OVCanvas::onMouse(wxMouseEvent& evt)
 {
     // It's weird that when we open a new model, this function will be executed
-    if (_isNewModel)
+    if (_isNewFile)
     {
-        _isNewModel = false;
+        _isNewFile = false;
         return;
     }
 
@@ -248,42 +293,41 @@ OVCanvas::onPaint(wxPaintEvent& WXUNUSED(evt))
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_TEXTURE_2D);
     glDisable(GL_LIGHTING);
-    drawBackground();
+    drawBackground(_backgroundImageTextureId);
     glDisable(GL_TEXTURE_2D);
 
-    // Lighting
-    const GLfloat a[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-    const GLfloat d[] = { 0.5f, 0.5f, 0.5f, 0.5f };
-    const GLfloat s[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    const GLfloat p0[] = { 7.0f, 0.0f, 0.0f, 1.0f };
-    const GLfloat p1[] = { -7.0f, -0.0f, 0.0f, 1.0f };
-    const GLfloat p2[] = { 0.0f, 7.0f, 0.0f, 1.0f };
-    const GLfloat p3[] = { 0.0f, -7.0f, 0.0f, 1.0f };
-    glLightfv(GL_LIGHT0, GL_AMBIENT, a);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, d);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, s);
-    glLightfv(GL_LIGHT0, GL_POSITION, p0);
-    glLightfv(GL_LIGHT1, GL_AMBIENT, a);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, d);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, s);
-    glLightfv(GL_LIGHT1, GL_POSITION, p1);
-    glLightfv(GL_LIGHT2, GL_AMBIENT, a);
-    glLightfv(GL_LIGHT2, GL_DIFFUSE, d);
-    glLightfv(GL_LIGHT2, GL_SPECULAR, s);
-    glLightfv(GL_LIGHT2, GL_POSITION, p2);
-    glLightfv(GL_LIGHT3, GL_AMBIENT, a);
-    glLightfv(GL_LIGHT3, GL_DIFFUSE, d);
-    glLightfv(GL_LIGHT3, GL_SPECULAR, s);
-    glLightfv(GL_LIGHT3, GL_POSITION, p3);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_LIGHT1);
-    glEnable(GL_LIGHT2);
-    glEnable(GL_LIGHT3);
-    glEnable(GL_LIGHTING);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    if (_lightingOn)
+    {
+        const GLfloat a[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+        const GLfloat d[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+        const GLfloat s[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+        const GLfloat p0[] = { 7.0f, 0.0f, 0.0f, 1.0f };
+        const GLfloat p1[] = { -7.0f, 0.0f, 0.0f, 1.0f };
+        const GLfloat p2[] = { 0.0f, 7.0f, 0.0f, 1.0f };
+        const GLfloat p3[] = { 0.0f, -7.0f, 0.0f, 1.0f };
+        glLightfv(GL_LIGHT0, GL_AMBIENT, a);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, d);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, s);
+        glLightfv(GL_LIGHT0, GL_POSITION, p0);
+        glLightfv(GL_LIGHT1, GL_AMBIENT, a);
+        glLightfv(GL_LIGHT1, GL_DIFFUSE, d);
+        glLightfv(GL_LIGHT1, GL_SPECULAR, s);
+        glLightfv(GL_LIGHT1, GL_POSITION, p1);
+        glLightfv(GL_LIGHT2, GL_AMBIENT, a);
+        glLightfv(GL_LIGHT2, GL_DIFFUSE, d);
+        glLightfv(GL_LIGHT2, GL_SPECULAR, s);
+        glLightfv(GL_LIGHT2, GL_POSITION, p2);
+        glLightfv(GL_LIGHT3, GL_AMBIENT, a);
+        glLightfv(GL_LIGHT3, GL_DIFFUSE, d);
+        glLightfv(GL_LIGHT3, GL_SPECULAR, s);
+        glLightfv(GL_LIGHT3, GL_POSITION, p3);
+        glEnable(GL_LIGHTING);
+    }
 
     // Render the foreground target
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
     glTranslatef(_offsetTranslation[0], _offsetTranslation[1], _offsetTranslation[2]);
     glRotatef(_offsetRotation[2], 0, 0, 1);
     glRotatef(_offsetRotation[1], 0, 1, 0);
@@ -307,7 +351,8 @@ OVCanvas::onPaint(wxPaintEvent& WXUNUSED(evt))
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    drawModel();
+    //drawModel();//******
+    drawForeground(_shapes, _materials, _textureIds);
     glDisable(GL_BLEND);
 
     glFlush();
@@ -343,22 +388,18 @@ OVCanvas::oglInit()
     glDepthFunc(GL_LESS);
     glShadeModel(GL_SMOOTH);
     glEnable(GL_TEXTURE_2D);
-    glGenTextures(1, &_textureId);
+    glGenTextures(1, &_backgroundImageTextureId);
+
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
+    glEnable(GL_LIGHT2);
+    glEnable(GL_LIGHT3);
 }
 
-void OVCanvas::drawBackground()
+void 
+OVCanvas::drawBackground(GLuint backgroundImageTextureId)
 {
     SetCurrent(*_oglContext);
-    glBindTexture(GL_TEXTURE_2D, _textureId);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-
-    // set texture filter to linear - we do not build mipmaps for speed
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-    // create the texture from OpenCV image data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, FrameWidth, FrameHeight, 0, GL_BGR,
-        GL_UNSIGNED_BYTE, _backgroundImage.data);
 
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -367,7 +408,8 @@ void OVCanvas::drawBackground()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    // draw the quad textured with the camera image
+    // Draw the quad textured with the background image
+    glBindTexture(GL_TEXTURE_2D, backgroundImageTextureId);
     glBegin(GL_QUADS);
     glTexCoord2f(0, 1);
     glVertex2f(-1, -1);
@@ -379,10 +421,129 @@ void OVCanvas::drawBackground()
     glVertex2f(1, -1);
     glEnd();
 
-    // reset the projection matrix
+    // Reset the projection matrix
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
+}
+
+void
+OVCanvas::drawForeground(const std::vector<tinyobj::shape_t>& shapes,
+                         const std::vector<tinyobj::material_t>& materials,
+                         const std::unordered_map<std::string, GLuint>& textureIds)
+{
+    glDisable(GL_COLOR_MATERIAL);
+    glEnable(GL_TEXTURE_2D);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    int preId = -1;
+    bool isTexture = false;
+    for (int i = 0; i < shapes.size(); ++i)
+    {
+        for (int f = 0; f < shapes[i].mesh.indices.size() / 3; ++f)
+        {
+            int material_id = shapes[i].mesh.material_ids[f];
+            if (material_id != preId)
+            {
+                GLfloat ambient[4], diffuse[4], specular[4];
+                for (int i = 0; i < 3; ++i)
+                {
+                    ambient[i] = materials[material_id].ambient[i];
+                    diffuse[i] = materials[material_id].diffuse[i];
+                    specular[i] = materials[material_id].specular[i];
+                }
+                ambient[3] = diffuse[3] = specular[3] = materials[material_id].dissolve;
+                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular);
+                glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, materials[material_id].shininess);
+
+                std::string map_Kd = materials[material_id].diffuse_texname;
+                auto got = textureIds.find(map_Kd);
+                if (got == textureIds.end())
+                {
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                    isTexture = false;
+                }
+                else
+                {
+                    glBindTexture(GL_TEXTURE_2D, got->second);
+                    isTexture = true;
+                }
+                preId = material_id;
+            }
+
+            glBegin(GL_TRIANGLES);
+            for (int j = 0; j < 3; ++j)
+            {
+                int idx = shapes[i].mesh.indices[3 * f + j];
+                glNormal3fv(&shapes[i].mesh.normals[3 * idx]);
+                if (isTexture) glTexCoord2fv(&shapes[i].mesh.texcoords[2 * idx]);
+                glVertex3fv(&shapes[i].mesh.positions[3 * idx]);
+            }
+            glEnd();
+        }
+    }
+}
+
+void
+OVCanvas::unitize(std::vector<tinyobj::shape_t>& shapes)
+{
+    float maxx = FLT_MIN;
+    float minx = FLT_MAX;
+    float maxy = FLT_MIN;
+    float miny = FLT_MAX;
+    float maxz = FLT_MIN;
+    float minz = FLT_MAX;
+    float cx, cy, cz, w, h, d;
+    float scale;
+
+    for (int i = 0; i < shapes.size(); ++i)
+    {
+        for (int v = 0; v < shapes[i].mesh.positions.size() / 3; ++v)
+        {
+            if (maxx < shapes[i].mesh.positions[3 * v + 0])
+                maxx = shapes[i].mesh.positions[3 * v + 0];
+            if (minx > shapes[i].mesh.positions[3 * v + 0])
+                minx = shapes[i].mesh.positions[3 * v + 0];
+
+            if (maxy < shapes[i].mesh.positions[3 * v + 1])
+                maxy = shapes[i].mesh.positions[3 * v + 1];
+            if (miny > shapes[i].mesh.positions[3 * v + 1])
+                miny = shapes[i].mesh.positions[3 * v + 1];
+
+            if (maxz < shapes[i].mesh.positions[3 * v + 2])
+                maxz = shapes[i].mesh.positions[3 * v + 2];
+            if (minz > shapes[i].mesh.positions[3 * v + 2])
+                minz = shapes[i].mesh.positions[3 * v + 2];
+        }
+    }
+    
+    // Calculate model width, height, and depth
+    w = abs(maxx) + abs(minx);
+    h = abs(maxy) + abs(miny);
+    d = abs(maxz) + abs(minz);
+
+    // Calculate center of the model
+    cx = (maxx + minx) / 2.0f;
+    cy = (maxy + miny) / 2.0f;
+    cz = (maxz + minz) / 2.0f;
+
+    // Calculate unitizing scale factor
+    scale = 2.0 / std::max(std::max(w, h), d);
+
+    // Translate around center then scale
+    for (int i = 0; i < shapes.size(); ++i)
+    {
+        for (int v = 0; v < shapes[i].mesh.positions.size() / 3; ++v)
+        {
+            shapes[i].mesh.positions[3 * v + 0] -= cx;
+            shapes[i].mesh.positions[3 * v + 1] -= cy;
+            shapes[i].mesh.positions[3 * v + 2] -= cz;
+            shapes[i].mesh.positions[3 * v + 0] *= scale;
+            shapes[i].mesh.positions[3 * v + 1] *= scale;
+            shapes[i].mesh.positions[3 * v + 2] *= scale;
+        }
+    }
 }
 
 void

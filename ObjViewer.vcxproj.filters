@@ -42,6 +42,12 @@
     <ClInclude Include="inc\OVUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\TinyObjLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\OVTexture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\glm\glm.cpp">
@@ -63,6 +69,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\OVUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TinyObjLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\OVTexture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

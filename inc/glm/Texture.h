@@ -8,6 +8,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <math.h>
+#include <string>
 
 typedef struct                                  
 {
@@ -37,8 +38,10 @@ typedef struct
     GLuint      Bpp;                                    // Bits Per Pixel
 } TGA;
 
-bool LoadTGA(Texture * texture, char * filename);
-bool LoadCompressedTGA(Texture * texture, char * filename, FILE * fTGA);
-bool LoadUncompressedTGA(Texture * texture, char * filename, FILE * fTGA);
+bool LoadTexture(Texture *texture, char* filename);
+bool LoadOpenCvImage(Texture *texture, char* filename);
+bool LoadTGA(Texture* texture, char* filename);
+bool LoadCompressedTGA(Texture* texture, char* filename, FILE * fTGA);
+bool LoadUncompressedTGA(Texture* texture, char* filename, FILE * fTGA);
 
 #endif

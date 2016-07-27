@@ -15,10 +15,12 @@
 
 #include <fstream>
 #include <queue>
+#include <unordered_map>
 #include "wx/glcanvas.h"
 #include "ObjViewer.h"
 #include "glm/glm.h"
 #include "OVCommon.h"
+#include "TinyObjLoader.h"
 
 namespace ov
 {
@@ -44,11 +46,13 @@ public:
     static double PlaneFar;
 
     void setRenderMode(int renderMode);
-    bool setGlmModel(std::string objModelFile);
-    bool setBackgroundImamge(std::string imageFile);
+    bool setGlmModel(std::string objModelFile);//******
+    bool setForegroundObject(const std::string& filename, bool isUnitization = true);
+    bool setBackgroundImamge(const std::string& filename);
     cv::Mat printScreen();
     void resetMatrix();
-    void setIsNewModel(bool isNewModel) { _isNewModel = isNewModel; }
+    void setIsNewFile(bool isNewFile) { _isNewFile = isNewFile; }
+    void setLightingOn(bool lightingOn);
 
 protected:
     void onMouse(wxMouseEvent& evt);
@@ -60,19 +64,31 @@ protected:
 private:
     // OpenGL functions
     void oglInit();
-    void drawBackground();
-    void drawModel();
+    void drawBackground(GLuint backgroundImageTextureId);
+    void drawForeground(const std::vector<tinyobj::shape_t>& shapes,
+                        const std::vector<tinyobj::material_t>& materials,
+                        const std::unordered_map<std::string, GLuint>& textureIds);
+    void unitize(std::vector<tinyobj::shape_t>& shapes);
+    void drawModel();//******
 
-    // Foreground and background objects
+    // Widgets
     ObjViewer*   _objViewer;
     wxGLContext* _oglContext;
-    GLMmodel*    _glmModel;
-    cv::Mat      _backgroundImage;
-    GLuint       _textureId;
 
-    // Selection of source and destination
+    // Foreground objects
+    std::vector<tinyobj::shape_t>           _shapes;
+    std::vector<tinyobj::material_t>        _materials;
+    std::unordered_map<std::string, GLuint> _textureIds;
+    GLMmodel*                               _glmModel;//******
+
+    // Backgroubd objects
+    cv::Mat _backgroundImage;
+    GLuint  _backgroundImageTextureId;
+
+    // Selections
     int  _renderMode;
-    bool _isNewModel;
+    bool _isNewFile;
+    bool _lightingOn;
 
     // Offset transformation coefficients
     std::vector<double> _offsetRotation;

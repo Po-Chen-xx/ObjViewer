@@ -42,6 +42,7 @@ enum WINDOW_ID
     ID_CANVAS,
     ID_RENDER_MODE_RADIO,
     ID_RESET,
+    ID_LIGHTING,
 };
 
 
@@ -60,6 +61,7 @@ class ObjViewer : public wxFrame
     void onMenuFileExit(wxCommandEvent& evt);
     void onMenuHelpAbout(wxCommandEvent& evt);
     void onRenderModeRadio(wxCommandEvent& evt);
+    void onLightingCheck(wxCommandEvent& evt);
     void onReset(wxCommandEvent& evt);
     void onMouse(wxMouseEvent& evt);
 
@@ -75,9 +77,11 @@ class ObjViewer : public wxFrame
     wxBoxSizer*           _controllerSizer;
     wxRadioBox*           _renderModeRadioBox;
     wxButton*             _resetButton;
+    wxCheckBox*           _lightingCheckBox;
 
     // Some options
     int  _renderMode;
+    bool _lightingOn;
     
     // Data path
     std::string _dataFolder;

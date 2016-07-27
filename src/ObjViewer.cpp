@@ -29,6 +29,7 @@ ObjViewer::ObjViewer(const wxString& title)
     : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(660, 566))
 {
     _renderMode = RENDER_SOLID;
+    _lightingOn = true;
 
     // Data path
 #ifdef RESEARCH_HANDTRACKING
@@ -68,8 +69,9 @@ ObjViewer::ObjViewer(const wxString& title)
     _oglCanvas = new OVCanvas(this, ID_CANVAS, wxDefaultPosition, GetClientSize(), wxSUNKEN_BORDER);
     _mainSizer->Add(_oglCanvas, 1, wxEXPAND);
     _oglCanvas->setRenderMode(_renderMode);
-    _oglCanvas->setGlmModel(_objModelFile);
     _oglCanvas->setBackgroundImamge(_imageFile);
+    //_oglCanvas->setGlmModel(_objModelFile);
+    _oglCanvas->setForegroundObject(_objModelFile);//******
 
     // ==================================== Controller part ====================================
     _controllerSizer = new wxBoxSizer(wxVERTICAL);
@@ -89,6 +91,11 @@ ObjViewer::ObjViewer(const wxString& title)
                                          1,
                                          wxRA_SPECIFY_COLS);
     _controllerSizer->Add(_renderModeRadioBox, 0, wxEXPAND | wxALL, 5);
+    _lightingCheckBox = CreateCheckBoxAndAddToSizer(this,
+                                                    _controllerSizer,
+                                                    wxT("Lighting"),
+                                                    ID_LIGHTING);
+    _lightingCheckBox->SetValue(true);
     _resetButton = new wxButton(this, ID_RESET, "Reset");
     _controllerSizer->Add(_resetButton, 0, wxEXPAND | wxALL, 5);
 
@@ -101,6 +108,7 @@ ObjViewer::ObjViewer(const wxString& title)
     Connect(ID_MENU_EXIT, wxEVT_MENU, wxCommandEventHandler(ObjViewer::onMenuFileExit));
     Connect(ID_MENU_HELP, wxEVT_MENU, wxCommandEventHandler(ObjViewer::onMenuHelpAbout));
     Connect(ID_RENDER_MODE_RADIO, wxEVT_RADIOBOX, wxCommandEventHandler(ObjViewer::onRenderModeRadio));
+    Connect(ID_LIGHTING, wxEVT_CHECKBOX, wxCommandEventHandler(ObjViewer::onLightingCheck));
     Connect(ID_RESET, wxEVT_BUTTON, wxCommandEventHandler(ObjViewer::onReset));
 }
 
@@ -119,11 +127,11 @@ ObjViewer::onMenuFileOpenObjModel(wxCommandEvent& evt)
     if (objModelFile != "")
     {
         SetStatusText("Loading the new model file...");
-        if (_oglCanvas->setGlmModel(objModelFile))
+        //if (_oglCanvas->setGlmModel(objModelFile))//******
+        if (_oglCanvas->setForegroundObject(objModelFile))
         {
-            _oglCanvas->setIsNewModel(true);
+            _oglCanvas->setIsNewFile(true);
             _oglCanvas->resetMatrix();
-            _oglCanvas->Refresh();
             _objModelFile = objModelFile;
         }
         SetStatusText(GetFileName(_objModelFile));
@@ -138,14 +146,15 @@ ObjViewer::onMenuFileOpenBackgroundImage(wxCommandEvent& evt)
              *.bmp;*.pbm;*.pgm;*.ppm;*.sr;*.ras;*.jpeg;*.jpg;*.jpe;*.jp2;*.tiff;*.tif;*.png|All files (*.*)|*.*"),
         wxFD_OPEN);
 
-    if (imageFile != "" && imageFile != _imageFile)
+    if (imageFile != "")
     {
-        if (!_oglCanvas->setBackgroundImamge(imageFile))
-            return;
-        _imageFile = imageFile;
-        _oglCanvas->resetMatrix();
-        _oglCanvas->Refresh();
-        reLayout();
+        if (_oglCanvas->setBackgroundImamge(imageFile))
+        {
+            _oglCanvas->setIsNewFile(true);
+            _imageFile = imageFile;
+            _oglCanvas->resetMatrix();
+            reLayout();
+        }
     }
 }
 
@@ -202,12 +211,17 @@ ObjViewer::onRenderModeRadio(wxCommandEvent& WXUNUSED(evt))
 }
 
 void
+ObjViewer::onLightingCheck(wxCommandEvent& WXUNUSED(evt))
+{
+    _lightingOn = _lightingCheckBox->GetValue();
+    _oglCanvas->setLightingOn(_lightingOn);
+}
+
+void
 ObjViewer::onReset(wxCommandEvent& WXUNUSED(evt))
 {
     _oglCanvas->resetMatrix();
-    Refresh();
 }
-
 
 void
 ObjViewer::reLayout()
