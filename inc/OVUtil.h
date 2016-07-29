@@ -23,13 +23,16 @@ namespace ov
 #endif
 
 std::string
-GetFileName(std::string s);
+GetFileName(const std::string& s);
 
 std::string
-GetExt(std::string s);
+GetBaseName(const std::string& s);
 
 std::string
-GetDir(std::string s);
+GetExt(const std::string& s);
+
+std::string
+GetDir(const std::string& s);
 
 Mat3
 Trackball(const Vec2& prePos, const Vec2& curPos);
@@ -48,5 +51,14 @@ CreateCheckBoxAndAddToSizer(wxWindow* parent,
                             wxSizer *sizer,
                             wxString labelStr,
                             wxWindowID id);
+
+Mat
+LoadMatrix(std::string fileName);
+
+std::string
+ZeroPadNumber(int num, int width);
+
+bool
+IsDirectoryExists(std::string dirName);
 
 } // namespace ov

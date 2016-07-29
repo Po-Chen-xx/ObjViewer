@@ -47,10 +47,14 @@ public:
     void setRenderMode(int renderMode);
     bool setForegroundObject(const std::string& filename, bool isUnitization = true);
     bool setBackgroundImamge(const std::string& filename);
-    cv::Mat printScreen();
+    bool readCameraParameters(const std::string& camParamFile);
+    void forceRender(const Mat3& R, const Vec3& t);
+    void printScreen(cv::Mat& image);
     void resetMatrix();
     void setIsNewFile(bool isNewFile) { _isNewFile = isNewFile; }
     void setLightingOn(bool lightingOn);
+    void setOffsetPose(const Vec3& r, const Vec3& t, const double s);
+    void getOffsetPose(Vec3& r, Vec3& t, double& s);
 
 protected:
     void onMouse(wxMouseEvent& evt);
@@ -87,9 +91,9 @@ private:
     bool _lightingOn;
 
     // Offset transformation coefficients
-    std::vector<double> _offsetRotation;
-    std::vector<double> _offsetTranslation;
-    double              _offsetScale;
+    Vec3   _offsetRotation;
+    Vec3   _offsetTranslation;
+    double _offsetScale;
 
     // For OpenGL rendering
     double _modelViewMatrix[16];

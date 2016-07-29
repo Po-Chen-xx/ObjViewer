@@ -135,6 +135,49 @@ OVCanvas::setBackgroundImamge(const std::string& filename)
     return true;
 }
 
+bool
+OVCanvas::readCameraParameters(const std::string& camParamFile)
+{
+    cv::FileStorage fs(camParamFile, cv::FileStorage::READ);
+    if (!fs.isOpened())
+        return false;
+    cv::Mat cameraMatrix;
+    fs["camera_matrix"] >> cameraMatrix;
+
+    double fx = cameraMatrix.at<double>(0, 0);
+    double fy = cameraMatrix.at<double>(1, 1);
+    double cx = cameraMatrix.at<double>(0, 2);
+    double cy = cameraMatrix.at<double>(1, 2);
+
+    double w, h;
+    fs["image_width"] >> w;
+    fs["image_height"] >> h;
+
+    assert(FrameWidth == w && FrameHeight && h);
+
+    _projectionMatrix[0] = 2 * fx / w;
+    _projectionMatrix[1] = 0;
+    _projectionMatrix[2] = 0;
+    _projectionMatrix[3] = 0;
+    _projectionMatrix[4] = 0;
+    _projectionMatrix[5] = -2 * fy / h;
+    _projectionMatrix[6] = 0;
+    _projectionMatrix[7] = 0;
+    _projectionMatrix[8] = 2 * (cx / w) - 1;
+    _projectionMatrix[9] = 1 - 2 * (cy / h);
+    _projectionMatrix[10] = (OVCanvas::PlaneFar + OVCanvas::PlaneNear) / (OVCanvas::PlaneFar - OVCanvas::PlaneNear);
+    _projectionMatrix[11] = 1;
+    _projectionMatrix[12] = 0;
+    _projectionMatrix[13] = 0;
+    _projectionMatrix[14] = 2 * OVCanvas::PlaneFar*OVCanvas::PlaneNear / (OVCanvas::PlaneNear - OVCanvas::PlaneFar);
+    _projectionMatrix[15] = 0;
+
+    // After getting the projection matrix, we do resize one time
+    onSize(wxSizeEvent());
+
+    return true;
+}
+
 void
 OVCanvas::setRenderMode(int renderMode)
 {
@@ -142,8 +185,16 @@ OVCanvas::setRenderMode(int renderMode)
     Refresh();
 }
 
-cv::Mat
-OVCanvas::printScreen()
+void
+OVCanvas::forceRender(const Mat3& R, const Vec3& t)
+{
+    _R = R;
+    _t = t;
+    onPaint(wxPaintEvent());
+}
+
+void
+OVCanvas::printScreen(cv::Mat& image)
 {
     GLint vp[4];
     glGetIntegerv(GL_VIEWPORT, vp);
@@ -166,8 +217,7 @@ OVCanvas::printScreen()
     for (j = 0; j < h; j++)
         memcpy(&topdown_pixel[j*w * 3], &bottomup_pixel[(h - j - 1)*w * 3], w * 3 * sizeof(unsigned char));
 
-    cv::Mat image = cv::Mat(h, w, CV_8UC3, topdown_pixel);
-    return image;
+    image = cv::Mat(h, w, CV_8UC3, topdown_pixel);
 }
 
 void
@@ -213,6 +263,23 @@ OVCanvas::setLightingOn(bool lightingOn)
     _lightingOn = lightingOn;
     Refresh();
 }
+
+void
+OVCanvas::setOffsetPose(const Vec3& r, const Vec3& t, const double s)
+{
+    _offsetRotation = r;
+    _offsetTranslation = t;
+    _offsetScale = s;
+}
+
+void
+OVCanvas::getOffsetPose(Vec3& r, Vec3& t, double& s)
+{
+    r = _offsetRotation;
+    t = _offsetTranslation;
+    s = _offsetScale;
+}
+
 
 void
 OVCanvas::onMouse(wxMouseEvent& evt)
@@ -424,12 +491,15 @@ OVCanvas::drawForeground(const std::vector<tinyobj::shape_t>& shapes,
             if (material_id != preId)
             {
                 GLfloat ambient[4], diffuse[4], specular[4];
-                for (int i = 0; i < 3; ++i)
-                {
-                    ambient[i] = materials[material_id].ambient[i];
-                    diffuse[i] = materials[material_id].diffuse[i];
-                    specular[i] = materials[material_id].specular[i];
-                }
+                //for (int i = 0; i < 3; ++i)
+                //{
+                //    ambient[i] = materials[material_id].ambient[i];
+                //    diffuse[i] = materials[material_id].diffuse[i];
+                //    specular[i] = materials[material_id].specular[i];
+                //}
+                memcpy(ambient, materials[material_id].ambient, 3 * sizeof(float));
+                memcpy(diffuse, materials[material_id].diffuse, 3 * sizeof(float));
+                memcpy(specular, materials[material_id].specular, 3 * sizeof(float));
                 ambient[3] = diffuse[3] = specular[3] = materials[material_id].dissolve;
                 glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
                 glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);

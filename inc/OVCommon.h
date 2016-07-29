@@ -12,7 +12,6 @@ typedef unsigned char byte;
 
 typedef Eigen::VectorXd Vec;
 typedef Eigen::MatrixXd Mat;
-typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatR;
 
 typedef Eigen::Vector2d Vec2;
 typedef Eigen::Vector3d Vec3;

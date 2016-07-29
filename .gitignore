@@ -3,6 +3,13 @@ model/*
 !model/cube/
 image/*
 !image/black.png
+poses/*
+!poses/00.txt
+batch/*
+!batch/cube.txt
+config/*
+!config/lifecam_720p.xml
+script/
 
 # Temporary files
 
@@ -10,13 +17,9 @@ image/*
 *.mov
 *.wmv
 *.mp4
-!video.mov
-video
+*.zip
 input
 output
-MarkerData
-output*
-*.zip
 
 # Compiled files
 *.sdf
@@ -28,4 +31,3 @@ Release
 
 # Reference
 reference
-Display.exe

@@ -37,6 +37,7 @@ enum WINDOW_ID
     ID_MENU_OPEN_MODEL,
     ID_MENU_OPEN_BACKGROUND_IMAGE,
     ID_MENU_SAVE_IMAGE,
+    ID_MENU_GEN_SEQ,
     ID_MENU_EXIT,
     ID_MENU_HELP,
     ID_CANVAS,
@@ -58,6 +59,7 @@ class ObjViewer : public wxFrame
     void onMenuFileOpenObjModel(wxCommandEvent& evt);
     void onMenuFileOpenBackgroundImage(wxCommandEvent& evt);
     void onMenuFileSaveImage(wxCommandEvent& evt);
+    void onMenuGenerateSequence(wxCommandEvent& evt);
     void onMenuFileExit(wxCommandEvent& evt);
     void onMenuHelpAbout(wxCommandEvent& evt);
     void onRenderModeRadio(wxCommandEvent& evt);
@@ -71,7 +73,7 @@ class ObjViewer : public wxFrame
     wxBoxSizer*           _mainSizer;
 
     // ================== Canvas part ==================
-    OVCanvas*             _oglCanvas;
+    OVCanvas*             _ovCanvas;
 
     // ================== Controller part ==================
     wxBoxSizer*           _controllerSizer;

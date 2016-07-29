@@ -15,7 +15,7 @@ const double PI = 3.1415927;
 const double ROT_EPS = 1e-15;
 
 std::string
-GetFileName(std::string s)
+GetFileName(const std::string& s)
 {
     char sep1 = '/', sep2 = '\\';
 
@@ -31,7 +31,19 @@ GetFileName(std::string s)
 }
 
 std::string
-GetExt(std::string s)
+GetBaseName(const std::string& s)
+{
+    char sep = '.';
+    size_t i = s.rfind(sep, s.length());
+
+    if (i != std::string::npos)
+        return(s.substr(0, i));
+    else
+        return("");
+}
+
+std::string
+GetExt(const std::string& s)
 {
     char sep = '.';
 
@@ -44,7 +56,7 @@ GetExt(std::string s)
 }
 
 std::string
-GetDir(std::string s)
+GetDir(const std::string& s)
 {
     char sep1 = '/', sep2 = '\\';
 
@@ -159,6 +171,75 @@ CreateCheckBoxAndAddToSizer(wxWindow* parent,
     sizer->Add(checkbox, 0, wxEXPAND | wxALL, 3);
 
     return checkbox;
+}
+
+Mat
+LoadMatrix(std::string fileName)
+{
+    std::ifstream file;
+    file.open(fileName, std::ios::in);
+
+    if (!file.is_open())
+        return Mat();
+
+    std::string line;
+    bool finishdOneLine = false;
+    int rows = 0, cols = 0;
+
+    // First round: find the row and column numbers
+    while (!std::getline(file, line, '\n').eof())
+    {
+        std::istringstream reader(line);
+        while (!reader.eof() && !finishdOneLine)
+        {
+            double val;
+            reader >> val;
+            if (reader.fail())
+                break;
+            ++cols;
+        }
+        ++rows;
+        finishdOneLine = true;
+    }
+
+    file.clear();
+    file.seekg(0);
+    Mat mat(rows, cols);
+    int i = 0, j = 0;
+    // Second round: fill in the matrix
+    while (!std::getline(file, line, '\n').eof())
+    {
+        std::istringstream reader(line);
+        while (!reader.eof())
+        {
+            double val;
+            reader >> val;
+            if (reader.fail())
+                break;
+            mat(i, j++) = val;
+        }
+        ++i;
+        j = 0;
+    }
+
+    return mat;
+}
+
+std::string
+ZeroPadNumber(int num, int width)
+{
+    std::ostringstream ss;
+    ss << std::setw(width) << std::setfill('0') << num;
+    return ss.str();
+}
+
+bool
+IsDirectoryExists(std::string dirName)
+{
+    DWORD attribs = ::GetFileAttributes(std::wstring(dirName.begin(), dirName.end()).c_str());
+    if (attribs == INVALID_FILE_ATTRIBUTES)
+        return false;
+    return (attribs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
 
