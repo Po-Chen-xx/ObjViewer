@@ -61,4 +61,7 @@ ZeroPadNumber(int num, int width);
 bool
 IsDirectoryExists(std::string dirName);
 
+void
+CreateDirectorys(std::string path);
+
 } // namespace ov

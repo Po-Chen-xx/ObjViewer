@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GL/gl.h>
 #include <opencv2/opencv.hpp>
 #include <string>
 #include <unordered_map>

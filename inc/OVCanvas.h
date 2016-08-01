@@ -81,7 +81,7 @@ private:
     std::vector<tinyobj::material_t>        _materials;
     std::unordered_map<std::string, GLuint> _textureIds;
 
-    // Backgroubd objects
+    // Backgroubd image
     cv::Mat _backgroundImage;
     GLuint  _backgroundImageTextureId;
 

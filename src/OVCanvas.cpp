@@ -280,7 +280,6 @@ OVCanvas::getOffsetPose(Vec3& r, Vec3& t, double& s)
     s = _offsetScale;
 }
 
-
 void
 OVCanvas::onMouse(wxMouseEvent& evt)
 {
@@ -340,6 +339,7 @@ OVCanvas::onPaint(wxPaintEvent& WXUNUSED(evt))
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_TEXTURE_2D);
     glDisable(GL_LIGHTING);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     drawBackground(_backgroundImageTextureId);
     glDisable(GL_TEXTURE_2D);
 
@@ -491,12 +491,6 @@ OVCanvas::drawForeground(const std::vector<tinyobj::shape_t>& shapes,
             if (material_id != preId)
             {
                 GLfloat ambient[4], diffuse[4], specular[4];
-                //for (int i = 0; i < 3; ++i)
-                //{
-                //    ambient[i] = materials[material_id].ambient[i];
-                //    diffuse[i] = materials[material_id].diffuse[i];
-                //    specular[i] = materials[material_id].specular[i];
-                //}
                 memcpy(ambient, materials[material_id].ambient, 3 * sizeof(float));
                 memcpy(diffuse, materials[material_id].diffuse, 3 * sizeof(float));
                 memcpy(specular, materials[material_id].specular, 3 * sizeof(float));

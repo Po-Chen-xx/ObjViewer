@@ -3,6 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <cmath>
+#include <stack>
 #include <AtlBase.h>
 #include <iomanip>
 #include "OVUtil.h"
@@ -239,8 +240,26 @@ IsDirectoryExists(std::string dirName)
     DWORD attribs = ::GetFileAttributes(std::wstring(dirName.begin(), dirName.end()).c_str());
     if (attribs == INVALID_FILE_ATTRIBUTES)
         return false;
-    return (attribs & FILE_ATTRIBUTE_DIRECTORY);
+    return (attribs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
+void
+CreateDirectorys(std::string path)
+{
+    std::string dir = GetDir(path);
+    std::stack<std::string> dirQueue;
+    while (!IsDirectoryExists(dir)&& !dir.empty())
+    {
+        dirQueue.push(dir);
+        dir.resize(dir.size() - 1);
+        dir = GetDir(dir);
+    }
+    while (!dirQueue.empty())
+    {
+        dir = dirQueue.top();
+        dirQueue.pop();
+        CreateDirectory(std::wstring(dir.begin(), dir.end()).c_str(), NULL);
+    }
+}
 
 } // namespace ov

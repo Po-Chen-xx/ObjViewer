@@ -241,11 +241,11 @@ ObjViewer::onMenuGenerateSequence(wxCommandEvent& WXUNUSED(evt))
         lineStream >> token;
         double noiseVariance = std::stod(token);
 
-        // 7. Ooutput directory
+        // 7. Output directory
         lineStream >> token;
         std::string imageDir = batchDir + token;
         if (!IsDirectoryExists(imageDir))
-            CreateDirectory(std::wstring(imageDir.begin(), imageDir.end()).c_str(), NULL);
+            CreateDirectorys(imageDir);
 
         int num = poses.rows();
         for (int i = 0; i < num; ++i)
