@@ -205,19 +205,16 @@ OVCanvas::printScreen(cv::Mat& image)
     w = vp[2];
     h = vp[3];
 
-    int j;
+    image = cv::Mat(h, w, CV_8UC3);
 
-    unsigned char *bottomup_pixel = (unsigned char *)malloc(w*h * 3 * sizeof(unsigned char));
-    unsigned char *topdown_pixel = (unsigned char *)malloc(w*h * 3 * sizeof(unsigned char));
-
-    //Byte alignment (that is, no alignment)
+    // Byte alignment (that is, no alignment)
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-    glReadPixels(x, y, w, h, GL_BGR, GL_UNSIGNED_BYTE, bottomup_pixel);
-    for (j = 0; j < h; j++)
-        memcpy(&topdown_pixel[j*w * 3], &bottomup_pixel[(h - j - 1)*w * 3], w * 3 * sizeof(unsigned char));
+    // Read pixels from GPU memory
+    glReadPixels(x, y, w, h, GL_BGR, GL_UNSIGNED_BYTE, image.data);
 
-    image = cv::Mat(h, w, CV_8UC3, topdown_pixel);
+    // Flip around the x-axis
+    cv::flip(image, image, 0);
 }
 
 void

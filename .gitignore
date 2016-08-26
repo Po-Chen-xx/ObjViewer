@@ -10,6 +10,7 @@ batch/*
 config/*
 !config/lifecam_720p.xml
 script/
+!config/*.m
 
 # Temporary files
 
